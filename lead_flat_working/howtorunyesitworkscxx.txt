@@ -1,0 +1,37 @@
+Create a header file (MyData.h) that includes all of the necessary classes for your program. This header file should include any necessary headers and define any classes or functions that you'll be using. For example, your MyData.h file might look something like this:
+
+#ifndef MyData_h
+#define MyData_h
+
+#include <vector>
+
+class MyData {
+public:
+    MyData();
+    virtual ~MyData();
+    
+    std::vector<float> AntiKt4emtopoCalo422Jets_pt;
+    std::vector<std::vector<float> > AntiKt4emtopoCalo422Jets_constituentEt;
+};
+
+#endif // MyData_h
+
+This header file defines a class called MyData that contains two std::vector member variables, AntiKt4emtopoCalo422Jets_pt and AntiKt4emtopoCalo422Jets_constituentEt.
+
+Create a LinkDef.h file that specifies which classes should be included in the dictionary. This file should include lines like the following for each class:
+
+#pragma link C++ class MyData+;
+
+Replace MyData with the name of the class that you want to include.
+
+Generate the dictionary information using the rootcint command. This command takes the name of the output file, the name of the header file, the name of the LinkDef.h file, and any other necessary options. Here's an example command:
+
+rootcint MyClassesDict.cxx -c MyData.h LinkDef.h
+
+This command will generate a file called MyClassesDict.cxx that contains the necessary dictionary information for the MyData class.
+
+Create a program file (myprogram.cxx) that includes the necessary headers, loads the input ROOT file, extracts the information you need, and writes it to a new ROOT file. Here's an example program that does this:
+
+g++ -o myprogram myprogram.cxx MyClassesDict.cxx `root-config --cflags --libs`
+
+./myprogram
