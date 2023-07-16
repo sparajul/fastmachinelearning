@@ -42,9 +42,9 @@ def extend_phi(phi, jet_phi):
     of the periodicity line. This takes care of this problem by remapping phi to be either
     above 2*pi or below zero.
     """
-    if abs(jet_phi + np.pi)<1.: # phi close to -pi
+    if np.any(abs(jet_phi + np.pi)<1.): # phi close to -pi
         return phi-2*np.pi*int(abs(phi-np.pi) <1-abs(jet_phi + np.pi))
-    elif abs(jet_phi - np.pi)<1.: # phi close to pi
+    elif np.any(abs(jet_phi - np.pi)<1.): # phi close to pi
         return phi+2*np.pi*int(abs(-phi-np.pi) < 1-abs(jet_phi - np.pi)) 
     else: 
         return phi
@@ -82,9 +82,9 @@ def pixelize(data, edges, cutoff=0.1, center_max_energy=True):
 
 
 def getJetImages(df):
-    eta = noTranslate(df,['AntiKt10LCTopoLeadJets_clus_calEta','AntiKt10LCTopoLeadJets_clus_calPhi'])[0]
-    phi = noTranslate(df,['AntiKt10LCTopoLeadJets_clus_calEta','AntiKt10LCTopoLeadJets_clus_calPhi'])[1]
-    eng = df.AntiKt10LCTopoLeadJets_clus_calE.values
+    eta = noTranslate(df,['emtopo_eta_matched','emtopo_phi_matched'])[0]
+    phi = noTranslate(df,['emtopo_eta_matched','emtopo_phi_matched'])[1]
+    eng = df.AntiKt4emtopoCalo422Jets_constituentEt.values
     
     edges = pixel_edges()
     li_images = []
@@ -92,8 +92,8 @@ def getJetImages(df):
         li_images.append(pixelize([eta[i],phi[i],eng[i]],edges))
     return li_images
 
-
-def pixel_edges(jet_size=1.0, pixel_size=(0.2, 0.2), border_size=0.5):
+def pixel_edges(jet_size=0.4, pixel_size=(0.055, 0.055), border_size=0.001):
+#def pixel_edges(jet_size=0.4, pixel_size=(0.01, 0.01), border_size=0.01):
     """Return pixel edges required to contain all clusters.
     border_size is interpreted as a fraction of the jet_size
     """
@@ -128,12 +128,9 @@ parser.add_argument('--ztt', action='store_true')
 parser.add_argument('--print', action='store_true')
 args = parser.parse_args()
 
+quark_events   = up.open("/data/santosh/qgdata/R4_50_75GeV/quark50.root")['ntuple']
+gluon_events   = up.open("/data/santosh/qgdata/R4_50_75GeV/gluon50_skim_events.root")['ntuple']
 
-#gluon_events   = up.open("/data/rohin/ttbar_Akt10.root")['ntuple']
-quark_events = up.open("/data/santosh/qgdata/multijet_quark_smallpt.root")['ntuple']
-#quark_events   = up.open("/data/rohin/ztt_Akt10.root")['ntuple']
-#qcd_events   = up.open("/data/rohin/multijet_j1.root")['ntuple']
-gluon_events = up.open("/data/santosh/qgdata/multijet_gluon_smallpt_events.root")['ntuple']
 
 if args.quark:
     arrays = quark_events.arrays()
@@ -142,7 +139,7 @@ if args.gluon:
 if args.ztt :
     arrays = ztt_events.arrays()
 
-pack = zip(arrays[b'AntiKt10LCTopoLeadJets_partonTruthLabel'],arrays[b'AntiKt10LCTopoLeadJets_pt'], arrays[b'AntiKt10LCTopoLeadJets_eta'], arrays[b'AntiKt10LCTopoLeadJets_phi'], arrays[b'AntiKt10LCTopoLeadJets_clus_calEta'], arrays[b'AntiKt10LCTopoLeadJets_clus_calPhi'], arrays[b'AntiKt10LCTopoLeadJets_clus_calE'])
+pack = zip(arrays[b'emtopo_partonTruthLabel_matched'],arrays[b'emtopo_pt_matched'], arrays[b'emtopo_eta_matched'], arrays[b'emtopo_phi_matched'], arrays[b'emtopo_constituentEta_matched'], arrays[b'emtopo_constituentPhi_matched'], arrays[b'emtopo_constituentEt_matched'])
 
 image_li = []
 for i, (trth,jet_pt,jet_eta,jet_phi, clus_eta, clus_phi, clus_E) in enumerate(pack):
@@ -150,7 +147,12 @@ for i, (trth,jet_pt,jet_eta,jet_phi, clus_eta, clus_phi, clus_E) in enumerate(pa
     clus_eta = clus_eta[:idx]
     clus_phi = clus_phi[:idx]
     clus_E   = clus_E[:idx]
-    max_idx=np.argsort(clus_E)[-1]
+#    print(len(clus_E))
+    if len(clus_E) ==0:
+#       print("Skipping event due to empty clus_E")
+       continue
+    else:	
+         max_idx=np.argsort(clus_E)[-1]
 
 
     clus_eta,clus_phi = translate(jet_eta,jet_phi,clus_eta,clus_phi,max_idx)
@@ -161,7 +163,10 @@ for i, (trth,jet_pt,jet_eta,jet_phi, clus_eta, clus_phi, clus_E) in enumerate(pa
     image_li.append(img)
 
 img = np.average(image_li,axis=0)
-plt.imshow(img, norm=matplotlib.colors.LogNorm())
+im1 = plt.imshow(img, norm=matplotlib.colors.LogNorm())
+plt.colorbar(im1)
+plt.xlabel(r'$\eta$')
+plt.ylabel(r'$\phi$')
 if args.gluon:
     plt.savefig("average_gluon.png")
 if args.quark:
